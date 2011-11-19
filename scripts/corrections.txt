@@ -1,0 +1,12 @@
+# Corrections for us domestic mail are American Samoa, Guam, Marshall Islands, Micronesia, Mariana Islands, Palau, Puerto Rico
+# Probably only needed for endicia
+ISO_US_MAIL_CORRECTIONS = {
+   'AS':'US',
+   'GU':'US',
+   'MH':'US',
+   'FM':'US',
+   'MP':'US',
+   'PW':'US',
+   'PR':'US',
+   'VI':'US',
+}

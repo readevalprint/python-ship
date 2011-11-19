@@ -58,11 +58,20 @@ class Address(object):
             street += '\n' + self.address2
         return '%s\n%s\n%s, %s %s %s' % (self.name, street, self.city, self.state, self.zip, self.country)
 
-def get_country_code(country):
-    lookup = {
-        'us': 'US',
-        'usa': 'US',
-        'united states': 'US',
-    }
-
-    return lookup.get(country.lower(), country)
+import iso
+def get_country_code(country, use_domestic_corrections = False):
+   country = country.upper()
+   if len(country) == 2:
+      # If it's a 2 digit code, generate an exception if it's not valid
+      name = iso.CODE_TO_COUNTRY[country]
+      code = country
+   elif country in iso.COUNTRY_TO_CODE:
+      # If spelling is exactly like the ISO 3166, slim odds here
+      code = iso.COUNTRY_TO_CODE[country]
+   else:   
+      # Otherwise use name guesses, or just return whatever was passed in so we can UPS, FedEx or Endicia can send us a confusing error message
+      code = iso.GUESS_TO_CODE.get(country, country)
+   if use_domestic_corrections:
+      # Fix the country to US if it's places like Guam or US Virigin Islands
+      code  = iso.ISO_US_MAIL_CORRECTIONS.get(code, code)
+   return code
