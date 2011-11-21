@@ -83,12 +83,10 @@ class Fedex(object):
         auth = client.factory.create('WebAuthenticationDetail')
         auth.UserCredential.Key = self.credentials['key']
         auth.UserCredential.Password = self.credentials['password']
-        print auth
         
         client_detail = client.factory.create('ClientDetail')
         client_detail.AccountNumber = self.credentials['account_number']
         client_detail.MeterNumber = self.credentials['meter_number']
-        print client_detail
     
         return auth, client_detail
     
