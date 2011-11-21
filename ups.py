@@ -124,8 +124,11 @@ class UPS(object):
             package.PackageWeight.Weight = p.weight
 
             if can_add_delivery_confirmation and p.require_signature:
-                package.PackageServiceOptions.DeliveryConfirmation.DCISType = str(p.require_signature)
-             
+               if type(p.require_signature) == int:
+                  package.PackageServiceOptions.DeliveryConfirmation.DCISType = str(p.require_signature)
+               else:
+                  package.PackageServiceOptions.DeliveryConfirmation.DCISType = str(1)
+                  # Pick 1 for signature required, 2 for adult signature.  I think default 1 is better because costs less and fewer bounces
             
             if p.value:
                 package.PackageServiceOptions.DeclaredValue.CurrencyCode = 'USD'
