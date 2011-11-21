@@ -9,16 +9,16 @@ def debug_print_tree(elem):
 import logging
 def setLoggingLevel(level = logging.ERROR):
    """ Convenience function to set all the logging in one place """
-   logging.getLogger('%s.ups' % __name__).setLevel(level)
-   logging.getLogger('%s.fedex' % __name__).setLevel(level)
-   logging.getLogger('%s.endicia' % __name__).setLevel(level)
+   logging.getLogger('%s.ups' % __name__.split('.')[0]).setLevel(level)
+   logging.getLogger('%s.fedex' % __name__.split('.')[0]).setLevel(level)
+   logging.getLogger('%s.endicia' % __name__.split('.')[0]).setLevel(level)
    logging.getLogger('suds.client').setLevel(level)
    logging.getLogger('suds.transport').setLevel(level)
    logging.getLogger('suds.xsd.schema').setLevel(level)
    logging.getLogger('suds.wsdl').setLevel(level)
 
 class Package(object):
-    def __init__(self, weight_in_ozs, length, width, height, value=0, require_signature=False, reference=u''):
+    def __init__(self, weight_in_ozs, length, width, height, value=0, require_signature=False, reference=u'', dry_ice_weight_in_ozs=0.0):
         self.weight = weight_in_ozs / 16.0
         self.length = length
         self.width = width
@@ -26,6 +26,7 @@ class Package(object):
         self.value = value
         self.require_signature = require_signature
         self.reference = reference
+        self.dry_ice_weight = dry_ice_weight_in_ozs / 35.27397
     
     @property
     def weight_in_ozs(self):

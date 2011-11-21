@@ -56,19 +56,11 @@ class FedexShipError(FedexError):
         messages = [ 'FedEx error %s: %s' % (x.Code, x.LocalizedMessage if hasattr(x, 'LocalizedMessage') else x.Message) for x in reply.Notifications ]
         error_text = '\n'.join(messages)
         super(FedexError, self).__init__(error_text)
-
-class Package(object):
-    def __init__(self, weight_in_ozs, length, width, height, value=0, require_signature=False, dry_ice_weight_in_ozs=0.0):
-        self.weight = weight_in_ozs / 16.0
-        self.length = length
-        self.width = width
-        self.height = height
-        self.value = value
-        self.require_signature = require_signature
-        self.dry_ice_weight = dry_ice_weight_in_ozs / 35.27397
+        
+from shipping import Package
 
 class Fedex(object):
-    def __init__(self, credentials, debug=True):
+    def __init__(self, credentials, debug = False):
         this_dir = os.path.dirname(os.path.realpath(__file__))
         self.wsdl_dir = os.path.join(this_dir, 'wsdl', 'fedex')
         self.credentials = credentials
@@ -80,12 +72,7 @@ class Fedex(object):
         wsdl_file_url = urllib.pathname2url(wsdl_file_path)
         wsdl_url = urlparse.urljoin('file://', wsdl_file_url)
         client = Client(wsdl_url)
-        
         if self.debug:
-            # For UPS, we have to do some fancy stuff to use the test environment
-            # e.g. client.set_options(location='https://onlinetools.ups.com/webservices/Ship')
-            # FedEx is nice and uses the test server automagically when you supply test
-            # account information. Yay!
             pass
         else:
             client.set_options(location='https://gateway.fedex.com:443/web-services')
@@ -153,11 +140,16 @@ class Fedex(object):
             package.Dimensions.Width = p.width
             package.Dimensions.Height = p.height
             
-            if p.require_signature:
-                package.SpecialServicesRequested.SpecialServiceTypes.append('SIGNATURE_OPTION')
-                package.SpecialServicesRequested.SignatureOptionDetail.OptionType = 'ADULT'
+            if hasattr(p, 'require_signature') and p.require_signature != False:
+               package.SpecialServicesRequested.SpecialServiceTypes.append('SIGNATURE_OPTION')
+               if p.require_signature in ('ADULT', 'DIRECT', 'INDIRECT', 'NO_SIGNATURE_REQUIRED'):
+                  package.SpecialServicesRequested.SignatureOptionDetail.OptionType = p.require_signature.upper()
+                  # Indirect = $2.00, Direct = $3.25, Adult = $4.25
+               else:
+                  # Use indirect if not specified because it's the least expensive and should suffice for proof of delivery to address on CC or PayPal chargeback which is all that it should matter for
+                  package.SpecialServicesRequested.SignatureOptionDetail.OptionType = 'INDIRECT'
 
-            if p.dry_ice_weight:
+            if hasattr(p, 'dry_ice_weight') and p.dry_ice_weight > 0:
                 package.SpecialServicesRequested.SpecialServiceTypes.append('DRY_ICE')
                 package.SpecialServicesRequested.DryIceWeight.Units = 'KG'
                 package.SpecialServicesRequested.DryIceWeight.Value = p.dry_ice_weight
@@ -190,8 +182,7 @@ class Fedex(object):
         try:
             reply = client.service.getRates(auth, client_detail, trans, version, ReturnTransitAndCommit=True, RequestedShipment=shipment)
 
-            if self.debug:
-                logger.info(reply)
+            logger.info(reply)
 
             if reply.HighestSeverity in [ 'ERROR', 'FAILURE' ]:
                 raise FedexShipError(reply)
@@ -275,8 +266,7 @@ class Fedex(object):
         
         try:
             self.reply = client.service.processShipment(auth, client_detail, trans, version, shipment)
-            if self.debug:
-                logger.info(self.reply)
+            logger.info(self.reply)
 
             if self.reply.HighestSeverity in [ 'ERROR', 'FAILURE' ]:
                 raise FedexShipError(self.reply)
