@@ -184,6 +184,7 @@ class Fedex(object):
 
             logger.info(reply)
 
+            notification_messages = []
             if reply.HighestSeverity in [ 'ERROR', 'FAILURE' ]:
                 raise FedexShipError(reply)
             elif reply.HighestSeverity == 'WARNING':
@@ -192,8 +193,9 @@ class Fedex(object):
                     if notification.Code == '556':
                         raise FedexError(notification.Message)
                 logger.info(reply)
+                notification_messages.append(notification.Message)
                 
-            response = { 'status': reply.HighestSeverity, 'info': list() }
+            response = { 'status': reply.HighestSeverity, 'info': list() , 'messages' : notification_messages}
             
             for details in reply.RateReplyDetails:
                 delivery_day = 'Unknown'
