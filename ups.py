@@ -86,13 +86,6 @@ class UPS(object):
         security.append(service_token)
 
         client.set_options(soapheaders=security)
-    
-    def _normalized_country_code(self, country):
-        country_lookup = {
-            'usa': 'US',
-            'united states': 'US',
-        }
-        return country_lookup.get(country.lower(), country)
         
     def wsdlURL(self, wsdl_name):
         wsdl_file_path = os.path.join(self.wsdl_dir, wsdl_name)
@@ -154,8 +147,7 @@ class UPS(object):
         shipment.Shipper.Address.AddressLine = [ shipper_address.address1, shipper_address.address2 ]
         shipment.Shipper.Address.City = shipper_address.city
         shipment.Shipper.Address.PostalCode = shipper_address.zip
-        shipper_country = self._normalized_country_code(shipper_address.country)
-        shipment.Shipper.Address.CountryCode = shipper_country
+        shipment.Shipper.Address.CountryCode = shipper_address.country
         shipment.Shipper.ShipperNumber = self.credentials['shipper_number']
         
         shipto_name = recipient_address.name[:35]
@@ -164,13 +156,12 @@ class UPS(object):
         shipment.ShipTo.Address.AddressLine = [ recipient_address.address1, recipient_address.address2 ]
         shipment.ShipTo.Address.City = recipient_address.city
         shipment.ShipTo.Address.PostalCode = recipient_address.zip
-        recipient_country = self._normalized_country_code(recipient_address.country)
-        shipment.ShipTo.Address.CountryCode = recipient_country
+        shipment.ShipTo.Address.CountryCode = recipient_address.country
 
         # Only add states if we're shipping to/from US, PR, or Ireland
-        if shipper_country in ( 'US', 'CA', 'IE' ):
+        if shipper_address.country in ( 'US', 'CA', 'IE' ):
             shipment.Shipper.Address.StateProvinceCode = shipper_address.state
-        if recipient_country in ( 'US', 'CA', 'IE' ):
+        if recipient_address.country in ( 'US', 'CA', 'IE' ):
             shipment.ShipTo.Address.StateProvinceCode = recipient_address.state
 
         if recipient_address.is_residence:
@@ -239,7 +230,7 @@ class UPS(object):
         address.PoliticalDivision2 = recipient.city
         address.PoliticalDivision1 = recipient.state
         address.PostcodePrimaryLow = recipient.zip
-        address.CountryCode = self._normalized_country_code(recipient.country)
+        address.CountryCode = recipient.country
         
         try:
             reply = client.service.ProcessXAV(request, AddressKeyFormat=address)
@@ -347,12 +338,11 @@ class UPS(object):
             shipment.ShipmentServiceOptions.InternationalForms.Contacts.SoldTo.Address.AddressLine = [ recipient_address.address1, recipient_address.address2 ]
             shipment.ShipmentServiceOptions.InternationalForms.Contacts.SoldTo.Address.City = recipient_address.city
             shipment.ShipmentServiceOptions.InternationalForms.Contacts.SoldTo.Address.PostalCode = recipient_address.zip
-            recipient_country = self._normalized_country_code(recipient_address.country)
-            shipment.ShipmentServiceOptions.InternationalForms.Contacts.SoldTo.Address.CountryCode = recipient_country
+            shipment.ShipmentServiceOptions.InternationalForms.Contacts.SoldTo.Address.CountryCode = recipient_address.country
             shipment.ShipmentServiceOptions.InternationalForms.Contacts.SoldTo.Phone.Number = recipient_address.phone
 
             # Only add states if we're shipping to/from US, CA, or Ireland
-            if recipient_country in ( 'US', 'CA', 'IE' ):
+            if recipient_address.country in ( 'US', 'CA', 'IE' ):
                 shipment.ShipmentServiceOptions.InternationalForms.Contacts.SoldTo.Address.StateProvinceCode = recipient_address.state
 
             for p in products:
@@ -361,7 +351,7 @@ class UPS(object):
                 product.Unit.Value = p.item_price
                 product.Unit.Number = p.quantity
                 product.Description = p.description[:35]
-                product.OriginCountryCode = self._normalized_country_code(shipper_address.country)
+                product.OriginCountryCode = shipper_address.country
                 shipment.ShipmentServiceOptions.InternationalForms.Product.append(product)
 
         label = client.factory.create('ns3:LabelSpecificationType')

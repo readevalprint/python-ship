@@ -73,13 +73,6 @@ class Fedex(object):
         self.wsdl_dir = os.path.join(this_dir, 'wsdl', 'fedex')
         self.credentials = credentials
         self.debug = debug
-
-    def _normalized_country_code(self, country):
-        country_lookup = {
-            'usa': 'US',
-            'united states': 'US',
-        }
-        return country_lookup.get(country.lower(), country)
     
     def create_client(self, wsdl_name):
         wsdl_file_path = os.path.join(self.wsdl_dir, wsdl_name)
@@ -118,7 +111,7 @@ class Fedex(object):
         shipment.Shipper.Address.City = shipper.city
         shipment.Shipper.Address.StateOrProvinceCode = shipper.state
         shipment.Shipper.Address.PostalCode = shipper.zip
-        shipment.Shipper.Address.CountryCode = self._normalized_country_code(shipper.country)
+        shipment.Shipper.Address.CountryCode = shipper.country
         shipment.Shipper.Address.Residential = shipper.is_residence
     
     def add_recipient(self, shipment, recipient):
@@ -129,7 +122,7 @@ class Fedex(object):
         shipment.Recipient.Address.City = recipient.city
         shipment.Recipient.Address.StateOrProvinceCode = recipient.state
         shipment.Recipient.Address.PostalCode = recipient.zip
-        shipment.Recipient.Address.CountryCode = self._normalized_country_code(recipient.country)
+        shipment.Recipient.Address.CountryCode = recipient.country
         shipment.Recipient.Address.Residential = recipient.is_residence
     
     def add_packages(self, client, shipment, service_type, packaging_type, packages):

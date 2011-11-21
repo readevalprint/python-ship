@@ -12,15 +12,6 @@ from suds.sax.element import Element
 
 from shipping import get_country_code
 
-def _normalize_country(country):
-    country_lookup = {
-        'united states': 'United States',
-        'us': 'United States',
-        'usa': 'United States',
-    }
-    
-    return country_lookup.get(country.lower(), country)
-
 class EndiciaError(Exception):
     pass
 
@@ -38,7 +29,7 @@ class Customs(object):
         self._quantity = quantity
         self._weight = weight
         self._value = value
-        self._country = country
+        self._country = get_country_code(country)
     
     @property
     def description(self):
@@ -58,7 +49,7 @@ class Customs(object):
     
     @property
     def country(self):
-        return _normalize_country(self._country)
+        return self._country
         
 class Package(object):
     domestic_shipment_types = [
@@ -111,14 +102,12 @@ class Endicia(object):
         self.client = Client(self.wsdl_url)
 
     def rate(self, packages, packaging_type, shipper, recipient, insurance='OFF', insurance_amount=0, delivery_confirmation=False, signature_confirmation=False):
-        to_country_code = get_country_code(recipient.country)
-
         request = self.client.factory.create('PostageRatesRequest')
         request.RequesterID = self.credentials['partner_id']
         request.CertifiedIntermediary.AccountID = self.credentials['account_id']
         request.CertifiedIntermediary.PassPhrase = self.credentials['passphrase']
 
-        request.MailClass = 'Domestic' if to_country_code.upper() == 'US' else 'International'
+        request.MailClass = 'Domestic' if recipient.country == 'US' else 'International'
         request.WeightOz = packages[0].weight_in_ozs
         request.MailpieceShape = packaging_type
         request.MailpieceDimensions.Length = packages[0].length
@@ -127,7 +116,7 @@ class Endicia(object):
 
         request.FromPostalCode = shipper.zip
         request.ToPostalCode = recipient.zip
-        request.ToCountryCode = to_country_code
+        request.ToCountryCode = recipient.country
 
         request.CODAmount = 0
         request.InsuredValue = insurance_amount
@@ -317,7 +306,7 @@ class LabelRequest(EndiciaRequest):
         info['City'] = address.city
         info['State'] = address.state
         info['PostalCode'] = address.zip
-        info['Country'] = _normalize_country(address.country.upper())
+        info['Country'] = address.country
         if address.phone:
             info['Phone'] = address.phone
         if address.address2:

@@ -19,7 +19,7 @@ def setLoggingLevel(level = logging.ERROR):
 
 class Package(object):
     def __init__(self, weight_in_ozs, length, width, height, value=0, require_signature=False, reference=u''):
-        self.weight = weight_in_ozs / 16
+        self.weight = weight_in_ozs / 16.0
         self.length = length
         self.width = width
         self.height = height
@@ -36,7 +36,7 @@ class Package(object):
         return self.weight
 
 class Address(object):
-    def __init__(self, name, address, city, state, zip, country, address2='', phone='', email='', is_residence=True, company_name=''):
+    def __init__(self, name, address, city, state, zip, country, address2='', phone='', email='', is_residence=True, company_name='', use_domestic_corrections = True):
         self.company_name = company_name or ''
         self.name = name or ''
         self.address1 = address or ''
@@ -44,7 +44,7 @@ class Address(object):
         self.city = city or ''
         self.state = state or ''
         self.zip = re.sub('[^\w]', '', unicode(zip).split('-')[0]) if zip else ''
-        self.country = country or ''
+        self.country = get_country_code, country, use_domestic_corrections)
         self.phone = re.sub('[^0-9]*', '', unicode(phone)) if phone else ''
         self.email = email or ''
         self.is_residence = is_residence or False
