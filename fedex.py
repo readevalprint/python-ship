@@ -60,7 +60,7 @@ class FedexShipError(FedexError):
 from shipping import Package
 
 class Fedex(object):
-    def __init__(self, credentials, debug = False):
+    def __init__(self, credentials, debug = True):
         this_dir = os.path.dirname(os.path.realpath(__file__))
         self.wsdl_dir = os.path.join(this_dir, 'wsdl', 'fedex')
         self.credentials = credentials
@@ -73,7 +73,7 @@ class Fedex(object):
         wsdl_url = urlparse.urljoin('file://', wsdl_file_url)
         client = Client(wsdl_url)
         if self.debug:
-            pass
+            client.set_options(location='https://wsbeta.fedex.com:443/web-services')
         else:
             client.set_options(location='https://gateway.fedex.com:443/web-services')
         
@@ -83,10 +83,12 @@ class Fedex(object):
         auth = client.factory.create('WebAuthenticationDetail')
         auth.UserCredential.Key = self.credentials['key']
         auth.UserCredential.Password = self.credentials['password']
+        print auth
         
         client_detail = client.factory.create('ClientDetail')
         client_detail.AccountNumber = self.credentials['account_number']
         client_detail.MeterNumber = self.credentials['meter_number']
+        print client_detail
     
         return auth, client_detail
     
