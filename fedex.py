@@ -140,14 +140,16 @@ class Fedex(object):
             package.Dimensions.Width = p.width
             package.Dimensions.Height = p.height
             
-            if hasattr(p, 'require_signature') and p.require_signature != False:
+            if hasattr(p, 'require_signature'):
                package.SpecialServicesRequested.SpecialServiceTypes.append('SIGNATURE_OPTION')
                if p.require_signature in ('ADULT', 'DIRECT', 'INDIRECT', 'NO_SIGNATURE_REQUIRED'):
                   package.SpecialServicesRequested.SignatureOptionDetail.OptionType = p.require_signature.upper()
                   # Indirect = $2.00, Direct = $3.25, Adult = $4.25
-               else:
+               elif p.require_signature:
                   # Use indirect if not specified because it's the least expensive and should suffice for proof of delivery to address on CC or PayPal chargeback which is all that it should matter for
                   package.SpecialServicesRequested.SignatureOptionDetail.OptionType = 'INDIRECT'
+               else:
+                  package.SpecialServicesRequested.SignatureOptionDetail.OptionType = 'NO_SIGNATURE_REQUIRED'
 
             if hasattr(p, 'dry_ice_weight') and p.dry_ice_weight > 0:
                 package.SpecialServicesRequested.SpecialServiceTypes.append('DRY_ICE')
