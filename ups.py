@@ -10,13 +10,6 @@ import urlparse
 import base64
 from datetime import date
 
-try:
-   from pysimplesoap.client import SoapClient
-except:
-   # Just make anything since it's not being used
-   class SoapClient(object):
-      pass
-
 from shipping import Address
 
 SERVICES = [
@@ -99,10 +92,6 @@ class UPS(object):
         plugin = FixRequestNamespacePlug()
         # Setting prefixes=False does not help
         return Client(wsdl_url, plugins=[plugin])
-        
-    def soapClient(self, wsdl):
-        wsdl_url = self.wsdlURL(wsdl)
-        return SoapClient(wsdl=wsdl_url, trace=True)
 
     def _create_shipment(self, client, packages, shipper_address, recipient_address, box_shape, namespace='ns3', create_reference_number=True, can_add_delivery_confirmation=True):
         shipment = client.factory.create('{}:ShipmentType'.format(namespace))
@@ -215,10 +204,6 @@ class UPS(object):
     
     def validate(self, recipient):
         client = self._get_client('XAV.wsdl')
-        #client = self.soapClient('XAV.wsdl')
-        #wsdl_url = self.wsdlURL('XAV.wsdl')
-        #client = SoapClient(wsdl = wsdl_url, trace=True)
-        #return client
         
         self._add_security_header(client)
         if not self.debug:

@@ -49,6 +49,25 @@ class Address(object):
         self.phone = re.sub('[^0-9]*', '', unicode(phone)) if phone else ''
         self.email = email or ''
         self.is_residence = is_residence or False
+        
+    def getCompany(self):
+        return self.company_name
+    def setCompany(self, value):
+        self.company_name = value
+    company = property(getCompany, setCompany)
+        
+    def getStreet1(self):
+        return self.address1
+    def setStreet1(self, value):
+        self.address1 = value
+    street1 = property(getStreet1, setStreet1)
+      
+    def getStreet2(self):
+        return self.address2
+    def setStreet2(self, value):
+        self.address2 = value
+    street2 = property(getStreet2, setStreet2)
+    
     
     def __eq__(self, other):
         return vars(self) == vars(other)
