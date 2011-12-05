@@ -5,9 +5,9 @@ import datetime
 import StringIO
 import binascii
 import urllib2
-import avs
-import rate
-import ship
+import avs as avs_xml
+import rate as rate_xml
+import ship as ship_xml
 
 class FedEx(object):
    def __init__(self, credentials_dictionary={}, debug=True, key='', password='', account='', meter=''):
@@ -19,9 +19,10 @@ class FedEx(object):
       self.request = None
       self.namespacedef = ''
       if self.debug:
-         self.post_url = 'https://gatewaybeta.fedex.com:443/xml/'
+         self.post_url = 'https://wsbeta.fedex.com:443/xml/'
       else:
-         self.post_url = 'https://gateway.fedex.com:443/xml/'
+         self.post_url = 'https://ws.fedex.com:443/xml/'
+      self.post_url_suffix = ''
       
    def add_auth(self):
       self.request.WebAuthenticationDetail = ship.WebAuthenticationDetail()
@@ -39,32 +40,41 @@ class FedEx(object):
       self.request.Version.Intermediate = intermediate
       self.request.Version.Minor = minor
       
-   def add_shipper(self, address):
-      pass
-      
-   def add_recipient(self, address):
-      pass
+   def add_party(self, namespace, address, fedex_account = None, tax_id = None):
+      party = namespace.Party()
+      party.Contact = namespace.Contact()
+      party.Contact.PersonName = address.name
+      party.Contact.PhoneNumber = address.phone
+      party.Contact.EMailAddress = address.email
+      party.Address = namespace.Address()
+      party.Address.StreetLines = [address.address1, address.address2 ]
+      party.Address.City = address.city
+      party.Address.StateOrProvinceCode = address.state
+      party.Address.PostalCode = address.zip
+      party.Address.CountryCode = address.country
+      party.Address.Residential = address.is_residence
+      return party
       
    def add_package(self, package):
       pass
       
    def verify(self, address):
-      self.request = avs.AddressValidationRequest()
+      self.request = avs_xml.AddressValidationRequest()
       self.add_version('aval', 2, 0, 0)
       self.namespacedef = 'xmlns:ns="http://fedex.com/ws/addressvalidation/v2"'
-      self.namespacedef = ''
+      self.post_url_suffix = 'addressvalidation/'
       # Timestamp format =  YYYY-MM-DDTHH:MM:SS-xx:xx utc
       self.request.RequestTimestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S-00:00')
       
       # Transaction Detail
-      self.request.TransactionDetail = avs.TransactionDetail()
-      self.request.TransactionDetail.CustomerTransactionId = datetime.datetime.now().strftime('avs.%Y%m%d.%H%M%S')
+      self.request.TransactionDetail = avs_xml.TransactionDetail()
+      self.request.TransactionDetail.CustomerTransactionId = datetime.datetime.now().strftime('avs_xml.%Y%m%d.%H%M%S')
       
       # Validation Address
-      self.request.AddressesToValidate = [avs.AddressToValidate()]
+      self.request.AddressesToValidate = [avs_xml.AddressToValidate()]
       if len(address.company) > 0:
          self.request.AddressesToValidate[0].CompanyName = address.company
-      self.request.AddressesToValidate[0].Address = avs.Address()
+      self.request.AddressesToValidate[0].Address = avs_xml.Address()
       self.request.AddressesToValidate[0].Address.StreetLines = [address.street1, address.street2]
       self.request.AddressesToValidate[0].Address.City = address.city
       self.request.AddressesToValidate[0].Address.StateOrProvinceCode = address.state
@@ -75,7 +85,7 @@ class FedEx(object):
       self.request.AddressesToValidate[0].Address.CountryCode = address.country
       
       # Validation Options
-      self.request.Options = avs.AddressValidationOptions()
+      self.request.Options = avs_xml.AddressValidationOptions()
       self.request.Options.VerifyAddresses = 1
       self.request.Options.CheckResidentialStatus = 1
       self.request.Options.MaximumNumberOfMatches = 3
@@ -89,17 +99,90 @@ class FedEx(object):
       response = self.send()
       return response
       
-   def rate(self, package, packaging_type, from_address, to_address):
-      self.request = rate.RateRequest()
+   def rate(self, packages, packaging_type, from_address, to_address, fedex_account=None):
+      self.request = rate_xml.RateRequest()
       self.add_version('crs', 10, 0, 0)
       self.namespacedef = 'xmlns:ns="http://fedex.com/ws/rate/v10"'
+      self.post_url_suffix = 'rate/'
       
-      self.send()
+      # Transaction Detail
+      self.request.TransactionDetail = rate_xml.TransactionDetail()
+      self.request.TransactionDetail.CustomerTransactionId = datetime.datetime.now().strftime('rate.%Y%m%d.%H%M%S')
+      
+      self.request.RequestedShipment = rate_xml.RequestedShipment()
+      self.request.RequestedShipment.RateRequestTypes.append('ACCOUNT')
+      self.request.RequestedShipment.ShipTimestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S-00:00')
+      self.request.RequestedShipment.EdtRequestType = 'ALL'
+      self.request.RequestedShipment.DropoffType = 'REGULAR_PICKUP'
+      
+      self.request.RequestedShipment.PackagingType = packaging_type
+      self.request.RequestedShipment.PackageDetail = 'INDIVIDUAL_PACKAGES'
+      self.request.RequestedShipment.ReturnTransitAndCommit = True
+      
+      # Add addresses
+      self.request.RequestedShipment.Shipper = self.add_party(rate_xml, from_address, fedex_account)
+      self.request.RequestedShipment.Recipient = self.add_party(rate_xml, to_address)
+      
+      # Add packages
+      self.request.RequestedShipment.PackageCount = len(packages)
+      self.request.RequestedShipment.RequestedPackageLineItems = []
+      self.request.RequestedShipment.TotalWeight = rate_xml.Weight()
+      self.request.RequestedShipment.TotalWeight.Value = 0
+      self.request.RequestedShipment.TotalWeight.Units = 'LB'
+      sequence = 1
+      for p in packages:
+         package = rate_xml.RequestedPackageLineItem()
+         package.SequenceNumber = sequence
+         package.GroupNumber = sequence
+         package.GroupPackageCount = len(packages)
+         package.PhysicalPackaging = 'BOX'
+         package.InsuredValue = rate_xml.Money()
+         package.InsuredValue.Amount = p.value
+         package.InsuredValue.Currency = 'USD'
+         
+         package.Weight = rate_xml.Weight()
+         package.Weight.Units = 'LB'
+         package.Weight.Value = p.weight
+         
+         package.Dimensions = rate_xml.Dimensions()
+         package.Dimensions.Units = 'IN'
+         package.Dimensions.Length = p.length
+         package.Dimensions.Width = p.width
+         package.Dimensions.Height = p.height
+         
+         package.SpecialServicesRequested = rate_xml.PackageSpecialServicesRequested()
+         package.SpecialServicesRequested.SpecialServiceTypes = []
+         if hasattr(p, 'require_signature'):
+            package.SpecialServicesRequested.SpecialServiceTypes.append('SIGNATURE_OPTION')
+            package.SpecialServicesRequested.SignatureOptionDetail = rate_xml.SignatureOptionDetail()
+            if p.require_signature in ('ADULT', 'DIRECT', 'INDIRECT', 'NO_SIGNATURE_REQUIRED'):
+               package.SpecialServicesRequested.SignatureOptionDetail.OptionType = p.require_signature.upper()
+               # Indirect = $2.00, Direct = $3.25, Adult = $4.25
+            elif p.require_signature:
+               # Use indirect if not specified because it's the least expensive and should suffice for proof of delivery to address on CC or PayPal chargeback which is all that it should matter for
+               package.SpecialServicesRequested.SignatureOptionDetail.OptionType = 'INDIRECT'
+            else:
+               package.SpecialServicesRequested.SignatureOptionDetail.OptionType = 'NO_SIGNATURE_REQUIRED'
+
+         if hasattr(p, 'dry_ice_weight') and p.dry_ice_weight > 0:
+             package.SpecialServicesRequested.SpecialServiceTypes.append('DRY_ICE')
+             package.SpecialServicesRequested.DryIceWeight = rate_xml.Weight()
+             package.SpecialServicesRequested.DryIceWeight.Units = 'KG'
+             package.SpecialServicesRequested.DryIceWeight.Value = p.dry_ice_weight
+
+         
+         self.request.RequestedShipment.RequestedPackageLineItems.append(package)
+         self.request.RequestedShipment.TotalWeight.Value = self.request.RequestedShipment.TotalWeight.Value + p.weight
+         sequence = sequence + 1
+
+      response = self.send()
+      return response
 
    def label(self, packages, packaging_type, service_type, from_address, to_address, email_alert=None, evening=False, payment=None, delivery_instructions=''):
       self.request = ship.ProcessShipmentRequest()
       self.add_version('ship', 10, 0, 0)
       self.namespacedef = 'xmlns:ns="http://fedex.com/ws/ship/v10"'
+      self.post_url_suffix = 'ship/'
       
       self.send()
       
@@ -107,14 +190,13 @@ class FedEx(object):
       self.add_auth()
       
       data = StringIO.StringIO()
-      self.request.export(data, 0, namespace_='', namespacedef_=self.namespacedef)
+      self.request.export(data, 0, namespacedef_=self.namespacedef)
       data = data.getvalue()
 
       data = data.encode('ascii')
-      data = test_avs
       logger.debug('XML Request:\n%s' % data)
       
-      request = urllib2.Request(self.post_url)
+      request = urllib2.Request(self.post_url + self.post_url_suffix)
       request.add_data(data)
       request.add_header('Referer', 'www.wholesaleimport.com')
       request.add_header('Host', request.get_host().split(':')[0])
@@ -134,51 +216,4 @@ class FedEx(object):
       
       return response_data
       
-Fedex = FedEx 
-
-test_avs = '''<AddressValidationRequest>
-<WebAuthenticationDetail>
-<UserCredential>
-<Key>cqDgZ1X4Og4hJ6Mi</Key>
-<Password>5SkxQ0WtOzXeDZDi63xaj1nGz</Password>
-</UserCredential>
-</WebAuthenticationDetail>
-<ClientDetail>
-<AccountNumber>510087860</AccountNumber>
-<MeterNumber>100076071</MeterNumber>
-</ClientDetail>
-<TransactionDetail>
-<CustomerTransactionId>WSVC_addressvalidation</CustomerTransactionId>
-</TransactionDetail>
-<Version>
-<ServiceId>aval</ServiceId>
-<Major>2</Major>
-<Intermediate>0</Intermediate>
-<Minor>0</Minor>
-</Version>
-<RequestTimestamp>2011-12-02T23:15:49-00:00</RequestTimestamp>
-<Options>
-<VerifyAddresses>1</VerifyAddresses>
-<CheckResidentialStatus>1</CheckResidentialStatus>
-<MaximumNumberOfMatches>10</MaximumNumberOfMatches>
-<StreetAccuracy>EXACT</StreetAccuracy>
-<DirectionalAccuracy>EXACT</DirectionalAccuracy>
-<CompanyNameAccuracy>EXACT</CompanyNameAccuracy>
-<ConvertToUpperCase>1</ConvertToUpperCase>
-<RecognizeAlternateCityNames>1</RecognizeAlternateCityNames>
-<ReturnParsedElements>1</ReturnParsedElements>
-</Options>
-<AddressesToValidate>
-<AddressId>String</AddressId>
-<CompanyName>String</CompanyName>
-<Address>
-<StreetLines>475 PARK AVE S FL 11</StreetLines>
-<City>NEWYORK</City>
-<StateOrProvinceCode>NY</StateOrProvinceCode>
-<PostalCode>10016</PostalCode>
-<UrbanizationCode>String</UrbanizationCode>
-<CountryCode>US</CountryCode>
-<Residential>1</Residential>
-</Address>
-</AddressesToValidate>
-</AddressValidationRequest>'''
+Fedex = FedEx
