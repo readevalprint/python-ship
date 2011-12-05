@@ -19,9 +19,9 @@ class FedEx(object):
       self.request = None
       self.namespacedef = ''
       if self.debug:
-         self.post_url = 'https://wsbeta.fedex.com:443/xml'
+         self.post_url = 'https://gatewaybeta.fedex.com:443/xml/'
       else:
-         self.post_url = 'https://ws.fedex.com:443/xml'
+         self.post_url = 'https://gateway.fedex.com:443/xml/'
       
    def add_auth(self):
       self.request.WebAuthenticationDetail = ship.WebAuthenticationDetail()
@@ -52,8 +52,13 @@ class FedEx(object):
       self.request = avs.AddressValidationRequest()
       self.add_version('aval', 2, 0, 0)
       self.namespacedef = 'xmlns:ns="http://fedex.com/ws/addressvalidation/v2"'
+      self.namespacedef = ''
       # Timestamp format =  YYYY-MM-DDTHH:MM:SS-xx:xx utc
       self.request.RequestTimestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S-00:00')
+      
+      # Transaction Detail
+      self.request.TransactionDetail = avs.TransactionDetail()
+      self.request.TransactionDetail.CustomerTransactionId = datetime.datetime.now().strftime('avs.%Y%m%d.%H%M%S')
       
       # Validation Address
       self.request.AddressesToValidate = [avs.AddressToValidate()]
@@ -71,14 +76,15 @@ class FedEx(object):
       
       # Validation Options
       self.request.Options = avs.AddressValidationOptions()
-      self.request.Options.VerifyAddresses = True
-      self.request.Options.CheckResidentialStatus = True
+      self.request.Options.VerifyAddresses = 1
+      self.request.Options.CheckResidentialStatus = 1
       self.request.Options.MaximumNumberOfMatches = 3
       self.request.Options.StreetAccuracy = 'MEDIUM'
       self.request.Options.DirectionalAccuracy = 'MEDIUM'
       self.request.Options.CompanyNameAccuracy = 'LOOSE'
-      self.request.Options.ConvertToUpperCase = True
-      self.request.Options.RecognizeAlternateCityNames = True
+      self.request.Options.ConvertToUpperCase = 1
+      self.request.Options.RecognizeAlternateCityNames = 1
+      self.request.Options.ReturnParsedElements = 1
       
       response = self.send()
       return response
@@ -101,18 +107,24 @@ class FedEx(object):
       self.add_auth()
       
       data = StringIO.StringIO()
-      self.request.export(data, 0, namespacedef_=self.namespacedef)
+      self.request.export(data, 0, namespace_='', namespacedef_=self.namespacedef)
       data = data.getvalue()
-      
-      # Add xml header
-      data = '<?xml version="1.0" encoding="UTF-8"?>\n' + data
-      data = data.encode('utf-8')
-      
+
+      data = data.encode('ascii')
+      data = test_avs
       logger.debug('XML Request:\n%s' % data)
-      print data
+      
+      request = urllib2.Request(self.post_url)
+      request.add_data(data)
+      request.add_header('Referer', 'www.wholesaleimport.com')
+      request.add_header('Host', request.get_host().split(':')[0])
+      request.add_header('Port', request.get_host().split(':')[1])
+      request.add_header('Accept', 'image/gif, image/jpeg, image/pjpeg, text/plain, text/html, */*')
+      request.add_header('Content-Type', 'text/xml')
+      request.add_header('Content-length', str(len(data)))
       
       # Get the response
-      response = urllib2.urlopen(self.post_url, data)
+      response = urllib2.urlopen(request)
       if response.code != 200:
          logger.error('HTTP Error %s' % str(response.code))
          raise Exception('HTTP Error %s' % str(response.code))
@@ -123,3 +135,50 @@ class FedEx(object):
       return response_data
       
 Fedex = FedEx 
+
+test_avs = '''<AddressValidationRequest>
+<WebAuthenticationDetail>
+<UserCredential>
+<Key>cqDgZ1X4Og4hJ6Mi</Key>
+<Password>5SkxQ0WtOzXeDZDi63xaj1nGz</Password>
+</UserCredential>
+</WebAuthenticationDetail>
+<ClientDetail>
+<AccountNumber>510087860</AccountNumber>
+<MeterNumber>100076071</MeterNumber>
+</ClientDetail>
+<TransactionDetail>
+<CustomerTransactionId>WSVC_addressvalidation</CustomerTransactionId>
+</TransactionDetail>
+<Version>
+<ServiceId>aval</ServiceId>
+<Major>2</Major>
+<Intermediate>0</Intermediate>
+<Minor>0</Minor>
+</Version>
+<RequestTimestamp>2011-12-02T23:15:49-00:00</RequestTimestamp>
+<Options>
+<VerifyAddresses>1</VerifyAddresses>
+<CheckResidentialStatus>1</CheckResidentialStatus>
+<MaximumNumberOfMatches>10</MaximumNumberOfMatches>
+<StreetAccuracy>EXACT</StreetAccuracy>
+<DirectionalAccuracy>EXACT</DirectionalAccuracy>
+<CompanyNameAccuracy>EXACT</CompanyNameAccuracy>
+<ConvertToUpperCase>1</ConvertToUpperCase>
+<RecognizeAlternateCityNames>1</RecognizeAlternateCityNames>
+<ReturnParsedElements>1</ReturnParsedElements>
+</Options>
+<AddressesToValidate>
+<AddressId>String</AddressId>
+<CompanyName>String</CompanyName>
+<Address>
+<StreetLines>475 PARK AVE S FL 11</StreetLines>
+<City>NEWYORK</City>
+<StateOrProvinceCode>NY</StateOrProvinceCode>
+<PostalCode>10016</PostalCode>
+<UrbanizationCode>String</UrbanizationCode>
+<CountryCode>US</CountryCode>
+<Residential>1</Residential>
+</Address>
+</AddressesToValidate>
+</AddressValidationRequest>'''
