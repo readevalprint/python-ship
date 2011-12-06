@@ -176,7 +176,7 @@ class FedEx(object):
          sequence = sequence + 1
 
       response = self.send()
-      return response
+      return rate_xml.parseString(response)
 
    def label(self, packages, packaging_type, service_type, from_address, to_address, email_alert=None, evening=False, payment=None, delivery_instructions=''):
       self.request = ship.ProcessShipmentRequest()
