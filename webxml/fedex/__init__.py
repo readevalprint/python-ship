@@ -40,7 +40,7 @@ class FedEx(object):
       self.request.Version.Intermediate = intermediate
       self.request.Version.Minor = minor
       
-   def add_party(self, namespace, address, fedex_account = None, tax_id = None):
+   def make_party(self, namespace, address, fedex_account = None, tax_id = None):
       party = namespace.Party()
       party.Contact = namespace.Contact()
       party.Contact.PersonName = address.name
@@ -120,8 +120,8 @@ class FedEx(object):
       self.request.RequestedShipment.ReturnTransitAndCommit = True
       
       # Add addresses
-      self.request.RequestedShipment.Shipper = self.add_party(rate_xml, from_address, fedex_account)
-      self.request.RequestedShipment.Recipient = self.add_party(rate_xml, to_address)
+      self.request.RequestedShipment.Shipper = self.make_party(rate_xml, from_address, fedex_account)
+      self.request.RequestedShipment.Recipient = self.make_party(rate_xml, to_address)
       
       # Add packages
       self.request.RequestedShipment.PackageCount = len(packages)
@@ -198,9 +198,6 @@ class FedEx(object):
       
       request = urllib2.Request(self.post_url + self.post_url_suffix)
       request.add_data(data)
-      request.add_header('Referer', 'www.wholesaleimport.com')
-      request.add_header('Host', request.get_host().split(':')[0])
-      request.add_header('Port', request.get_host().split(':')[1])
       request.add_header('Accept', 'image/gif, image/jpeg, image/pjpeg, text/plain, text/html, */*')
       request.add_header('Content-Type', 'text/xml')
       request.add_header('Content-length', str(len(data)))
