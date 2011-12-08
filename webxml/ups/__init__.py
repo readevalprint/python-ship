@@ -14,7 +14,7 @@ class UPS(object):
    def __init__(self, credentials_dictionary={}, debug=True, username='', password='', account='', license=''):
       self.access = access_xml.AccessRequest()
       self.access.AccessLicenseNumber = credentials_dictionary.get('access_license', license)
-      self.access.UserID = credentials_dictionary.get('username', username)
+      self.access.UserId = credentials_dictionary.get('username', username)
       self.access.Password = credentials_dictionary.get('password', password)
       
       self.account = credentials_dictionary.get('shipper_number', account)
@@ -100,8 +100,8 @@ class UPS(object):
          package.Dimensions.UnitOfMeasurement = rate_xml.UnitOfMeasurementType()
          package.Dimensions.UnitOfMeasurement.Code = 'IN'  #Other choice is CM
          package.Dimensions.Length = p.length
-         package.Dimensions.Length = p.width
-         package.Dimensions.Length = p.height
+         package.Dimensions.Width = p.width
+         package.Dimensions.Height = p.height
          
          package.PackageWeight = rate_xml.WeightType()
          package.PackageWeight.UnitOfMeasurement = rate_xml.UnitOfMeasurementType()
