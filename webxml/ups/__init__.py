@@ -34,6 +34,9 @@ class UPS(object):
          shipper.Name = from_address.contact[:35]
       if ups_account and len(ups_account) > 0:
          shipper.ShipperNumber = ups_account
+      else:
+         # Fall back to the account from configuration
+         shipper.ShipperNumber = self.account
       shipper.Address = namespace.AddressType()
       shipper.Address.AddressLine1 = from_address.address1
       shipper.Address.AddressLine2 = getattr(from_address, 'address2', '')

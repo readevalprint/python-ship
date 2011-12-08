@@ -42,6 +42,7 @@ class FedEx(object):
       
    def make_party(self, namespace, address, fedex_account = None, tax_id = None):
       party = namespace.Party()
+      party.AccountNumber = fedex_account
       party.Contact = namespace.Contact()
       party.Contact.PersonName = address.name
       party.Contact.PhoneNumber = address.phone
@@ -99,7 +100,7 @@ class FedEx(object):
       response = self.send()
       return response
       
-   def rate(self, packages, packaging_type, from_address, to_address, fedex_account=None):
+   def rate(self, packages, packaging_type, from_address, to_address, fedex_account=None, ):
       self.request = rate_xml.RateRequest()
       self.add_version('crs', 10, 0, 0)
       self.namespacedef = 'xmlns:ns="http://fedex.com/ws/rate/v10"'
@@ -121,6 +122,8 @@ class FedEx(object):
       
       # Add addresses
       self.request.RequestedShipment.Shipper = self.make_party(rate_xml, from_address, fedex_account)
+      if fedex_account is None:
+         self.request.RequestedShipment.Shipper.AccountNumber = self.account
       self.request.RequestedShipment.Recipient = self.make_party(rate_xml, to_address)
       
       # Add packages

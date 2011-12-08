@@ -2,7 +2,7 @@ from shipping import Address
 from shipping import Package
 from ups import PACKAGES
 import logging
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.ERROR, filename='test_tshroyer.log')
 from shipping import setLoggingLevel
 setLoggingLevel(logging.ERROR)
 #logging.getLogger('%s.ups' % __name__).setLevel(logging.DEBUG)
@@ -33,6 +33,7 @@ our_packaging =  PACKAGES[0][0]
 #print(ups.rate([ten_pound_box], our_packaging, our_place, powells))
 
 import webxml.ups as ups
+logging.getLogger().setLevel(10)
 ups2 = ups.UPS(ups_config, debug=False)
 print(ups2.rate([ten_pound_box], our_packaging, our_place, powells))
 
@@ -47,6 +48,5 @@ our_packaging = fedex.PACKAGES[4]
 #try out fedex non-SOAP xml
 import webxml.fedex as fedex
 test2 = fedex.FedEx(fedex_test, debug=True)
-logging.getLogger().setLevel(10)
 #print(test2.verify(our_place))
 print(test2.rate([ten_pound_box], our_packaging, our_place, powells))
