@@ -35,7 +35,7 @@ our_packaging =  PACKAGES[0][0]
 import webxml.ups as ups
 logging.getLogger().setLevel(10)
 ups2 = ups.UPS(ups_config, debug=False)
-print(ups2.rate([ten_pound_box], our_packaging, our_place, powells))
+#print(ups2.rate([ten_pound_box], our_packaging, our_place, powells))
 
 import fedex
 prod = fedex.Fedex(fedex_prod, debug=False)
@@ -47,6 +47,8 @@ our_packaging = fedex.PACKAGES[4]
 
 #try out fedex non-SOAP xml
 import webxml.fedex as fedex
+fedex_test['key'] = '123'
 test2 = fedex.FedEx(fedex_test, debug=True)
 #print(test2.verify(our_place))
-print(test2.rate([ten_pound_box], our_packaging, our_place, powells))
+rate_reply = test2.rate([ten_pound_box], our_packaging, our_place, powells)
+print rate_reply

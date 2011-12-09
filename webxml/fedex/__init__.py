@@ -9,6 +9,32 @@ import avs as avs_xml
 import rate as rate_xml
 import ship as ship_xml
 
+class FedexError(Exception):
+    pass
+
+class FedexWebError(FedexError):
+    def __init__(self, fault, document):
+        self.fault = fault
+        self.document = document
+        
+        fault = self.document.childAtPath('/Envelope/Body/Fault/detail/fault')
+        code = fault.childAtPath('/errorCode').getText()
+        reason = fault.childAtPath('/reason').getText()
+        messages = fault.childrenAtPath('/details/ValidationFailureDetail/message')
+        words = [ x.getText() for x in messages ]
+        error_lines = '\n'.join(words)
+        
+        error_text = 'FedEx error %s: %s Details:\n%s ' % (code, reason, error_lines)
+        super(FedexError, self).__init__(error_text)
+
+class FedexShipError(FedexError):
+    def __init__(self, reply):
+        self.reply = reply
+        
+        messages = [ 'FedEx error %s: %s' % (x.Code, x.LocalizedMessage if hasattr(x, 'LocalizedMessage') else x.Message) for x in reply.Notifications ]
+        error_text = '\n'.join(messages)
+        super(FedexError, self).__init__(error_text)
+
 class FedEx(object):
    def __init__(self, credentials_dictionary={}, debug=True, key='', password='', account='', meter=''):
       self.key = credentials_dictionary.get('key', key)
@@ -106,10 +132,14 @@ class FedEx(object):
       self.namespacedef = 'xmlns:ns="http://fedex.com/ws/rate/v10"'
       self.post_url_suffix = 'rate/'
       
+      # Request Config
+      self.request.ReturnTransitAndCommit = True
+      
       # Transaction Detail
       self.request.TransactionDetail = rate_xml.TransactionDetail()
       self.request.TransactionDetail.CustomerTransactionId = datetime.datetime.now().strftime('rate.%Y%m%d.%H%M%S')
       
+      # Shipment Details
       self.request.RequestedShipment = rate_xml.RequestedShipment()
       self.request.RequestedShipment.RateRequestTypes.append('ACCOUNT')
       self.request.RequestedShipment.ShipTimestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S-00:00')
@@ -179,7 +209,30 @@ class FedEx(object):
          sequence = sequence + 1
 
       response = self.send()
-      return rate_xml.parseString(response)
+      response_xml = rate_xml.parseString(response)
+      
+      notifications = []
+      if response_xml.HighestSeverity in ('ERROR', 'FAILURE'):
+         raise FedexShipError(response_xml)
+      elif response_xml.HighestSeverity == 'WARNING':
+         for notification in response_xml.Notifications:
+            if notification.Code == '556':
+               raise FedexError(notification.Message)
+         notifications.append(notification.Message)
+         logger.warning(notification.Message)
+         
+      parsed_response = {'status' : response_xml.HighestSeverity, 'info' : [], 'messages' : notifications}
+      for details in response_xml.RateReplyDetails:
+         delivery_day = 'Unknown'
+         if details.DeliveryDayOfWeek:
+            delivery_day = details.DeliveryDayOfWeek
+         parsed_response['info'].append({
+            'service' : details.ServiceType,
+            'package' : details.PackagingType,
+            'delivery_day' : delivery_day,
+            'cost' : details.RatedShipmentDetails[0].ShipmentRateDetail.TotalNetCharge.Amount
+         })
+      return parsed_response
 
    def label(self, packages, packaging_type, service_type, from_address, to_address, email_alert=None, evening=False, payment=None, delivery_instructions=''):
       self.request = ship.ProcessShipmentRequest()
