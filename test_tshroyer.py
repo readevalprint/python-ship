@@ -2,9 +2,9 @@ from shipping import Address
 from shipping import Package
 from ups import PACKAGES
 import logging
-logging.basicConfig(level=logging.ERROR, filename='test_tshroyer.log')
+logging.basicConfig(level=logging.DEBUG, filename='test_tshroyer.log')
 from shipping import setLoggingLevel
-setLoggingLevel(logging.ERROR)
+setLoggingLevel(logging.DEBUG)
 #logging.getLogger('%s.ups' % __name__).setLevel(logging.DEBUG)
 #logging.getLogger('%s.fedex' % __name__).setLevel(logging.DEBUG)
 
@@ -33,7 +33,6 @@ our_packaging =  PACKAGES[0][0]
 #print(ups.rate([ten_pound_box], our_packaging, our_place, powells))
 
 import webxml.ups as ups
-logging.getLogger().setLevel(10)
 ups2 = ups.UPS(ups_config, debug=False)
 #print(ups2.rate([ten_pound_box], our_packaging, our_place, powells))
 
@@ -47,8 +46,10 @@ our_packaging = fedex.PACKAGES[4]
 
 #try out fedex non-SOAP xml
 import webxml.fedex as fedex
-fedex_test['key'] = '123'
-test2 = fedex.FedEx(fedex_test, debug=True)
-#print(test2.verify(our_place))
-rate_reply = test2.rate([ten_pound_box], our_packaging, our_place, powells)
-print rate_reply
+#fedex_test['key'] = '123'
+test2 = fedex.FedEx(fedex_prod, debug=False)
+a =test2.verify(our_place)
+print a
+#logging.getLogger().setLevel(10)
+#rate_reply = test2.rate([ten_pound_box], our_packaging, our_place, powells)
+#print rate_reply

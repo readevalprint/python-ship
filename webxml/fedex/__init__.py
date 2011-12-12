@@ -1,5 +1,6 @@
 import logging
 logger = logging.getLogger(__name__)
+print __name__
 
 import datetime
 import StringIO
@@ -8,6 +9,38 @@ import urllib2
 import avs as avs_xml
 import rate as rate_xml
 import ship as ship_xml
+
+SERVICES = [
+      "EUROPE_FIRST_INTERNATIONAL_PRIORITY",
+      "FEDEX_1_DAY_FREIGHT",
+      "FEDEX_2_DAY",
+      "FEDEX_2_DAY_AM",
+      "FEDEX_2_DAY_FREIGHT",
+      "FEDEX_3_DAY_FREIGHT",
+      "FEDEX_EXPRESS_SAVER",
+      "FEDEX_FIRST_FREIGHT",
+      "FEDEX_FREIGHT_ECONOMY",
+      "FEDEX_FREIGHT_PRIORITY",
+      "FEDEX_GROUND",
+      "FIRST_OVERNIGHT",
+      "GROUND_HOME_DELIVERY",
+      "INTERNATIONAL_ECONOMY",
+      "INTERNATIONAL_ECONOMY_FREIGHT",
+      "INTERNATIONAL_FIRST",
+      "INTERNATIONAL_PRIORITY",
+      "INTERNATIONAL_PRIORITY_FREIGHT",
+      "PRIORITY_OVERNIGHT",
+      "SMART_POST",
+      "STANDARD_OVERNIGHT",
+]
+
+PACKAGES = [
+    'FEDEX_BOX',
+    'FEDEX_ENVELOPE',
+    'FEDEX_PAK',
+    'FEDEX_TUBE',
+    'YOUR_PACKAGING',
+]
 
 class FedexError(Exception):
     pass
@@ -30,8 +63,7 @@ class FedexWebError(FedexError):
 class FedexShipError(FedexError):
     def __init__(self, reply):
         self.reply = reply
-        
-        messages = [ 'FedEx error %s: %s' % (x.Code, x.LocalizedMessage if hasattr(x, 'LocalizedMessage') else x.Message) for x in reply.Notifications ]
+        messages = [ 'FedEx error %s: %s' % (x.Code, x.LocalizedMessage or x.Message) for x in reply.Notifications ]
         error_text = '\n'.join(messages)
         super(FedexError, self).__init__(error_text)
 
@@ -126,7 +158,7 @@ class FedEx(object):
       response = self.send()
       return response
       
-   def rate(self, packages, packaging_type, from_address, to_address, fedex_account=None, ):
+   def rate(self, packages, packaging_type, from_address, to_address, fedex_account=None, service_type=None):
       self.request = rate_xml.RateRequest()
       self.add_version('crs', 10, 0, 0)
       self.namespacedef = 'xmlns:ns="http://fedex.com/ws/rate/v10"'
@@ -143,12 +175,21 @@ class FedEx(object):
       self.request.RequestedShipment = rate_xml.RequestedShipment()
       self.request.RequestedShipment.RateRequestTypes.append('ACCOUNT')
       self.request.RequestedShipment.ShipTimestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S-00:00')
-      self.request.RequestedShipment.EdtRequestType = 'ALL'
+      # Get rid of the country warning if we are shipping the same country
+      if to_address.country == from_address.country:
+         # Domestic
+         self.request.RequestedShipment.EdtRequestType = 'NONE'
+      else:
+         # International
+         self.request.RequestedShipment.EdtRequestType = 'ALL'
       self.request.RequestedShipment.DropoffType = 'REGULAR_PICKUP'
       
       self.request.RequestedShipment.PackagingType = packaging_type
       self.request.RequestedShipment.PackageDetail = 'INDIVIDUAL_PACKAGES'
       self.request.RequestedShipment.ReturnTransitAndCommit = True
+      
+      # Specify the service types if provided
+      self.request.RequestedShipment.ServiceType = service_type
       
       # Add addresses
       self.request.RequestedShipment.Shipper = self.make_party(rate_xml, from_address, fedex_account)
@@ -243,6 +284,7 @@ class FedEx(object):
       self.send()
       
    def send(self):
+      logger.setLevel(10)
       self.add_auth()
       
       data = StringIO.StringIO()
@@ -266,6 +308,10 @@ class FedEx(object):
       
       response_data = response.read()
       logger.debug('XML Response:\n%s' % response_data)
+         
+      if 'soapenv' in response_data:
+         # FedEx returns a soap fault so parse the soap envelope and do something smart
+         pass
       
       return response_data
       

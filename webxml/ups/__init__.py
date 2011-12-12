@@ -6,6 +6,34 @@ import StringIO
 import binascii
 import urllib2
 
+SERVICES = [
+    ('03', 'UPS Ground'),
+    ('11', 'UPS Standard'),
+    ('01', 'UPS Next Day'),
+    ('14', 'UPS Next Day AM'),
+    ('13', 'UPS Next Day Air Saver'),
+    ('02', 'UPS 2nd Day'),
+    ('59', 'UPS 2nd Day AM'),
+    ('12', 'UPS 3-day Select'),
+    ('65', 'UPS Saver'),
+    ('07', 'UPS Worldwide Express'),
+    ('08', 'UPS Worldwide Expedited'),
+    ('54', 'UPS Worldwide Express Plus'),
+]
+
+SERVICES_LOOKUP = dict(SERVICES)
+
+PACKAGES = [
+    ('02', 'Custom Packaging'),
+    ('01', 'UPS Letter'),
+    ('03', 'Tube'),
+    ('04', 'PAK'),
+    ('21', 'UPS Express Box'),
+    ('2a', 'Small Express Box'),
+    ('2b', 'Medium Express Box'),
+    ('2c', 'Large Express Box'),
+]
+
 import accessrequest as access_xml
 import raterequest as rate_xml
 import rateresponse as rate_response_xml
@@ -31,7 +59,7 @@ class UPS(object):
       shipper = namespace.ShipperType()
       shipper.Name = from_address.company[:35]
       if len(shipper.Name) == 0:
-         shipper.Name = from_address.contact[:35]
+         shipper.Name = from_address.name[:35]
       if ups_account and len(ups_account) > 0:
          shipper.ShipperNumber = ups_account
       else:
@@ -54,7 +82,7 @@ class UPS(object):
       ship_to = namespace.ShipToType()
       ship_to.Name = to_address.company[:35]
       if len(ship_to.Name) == 0:
-         ship_to.Name = to_address.countact[:35]
+         ship_to.Name = to_address.name[:35]
       ship_to.Address = namespace.AddressType()
       ship_to.Address.AddressLine1 = to_address.address1
       ship_to.Address.AddressLine2 = getattr(to_address, 'address2', '')
@@ -71,7 +99,7 @@ class UPS(object):
    def verify(self, address):
       pass
       
-   def rate(self, packages, packaging_type, from_address, to_address, ups_account=None, rate_type='00'):
+   def rate(self, packages, packaging_type, from_address, to_address, ups_account=None, rate_type='00', service_type=None):
       self.post_url_suffix = 'Rate'
       self.request = rate_xml.RatingServiceSelectionRequest()
       self.request.Request = rate_xml.RequestType()
@@ -82,6 +110,7 @@ class UPS(object):
       
       self.request.PickupType = rate_xml.CodeType()
       self.request.PickupType.Code = '01' # Using Daily Pickup
+         
       
       self.request.CustomerClassification = rate_xml.CodeType()
       self.request.CustomerClassification.Code = rate_type
@@ -89,6 +118,10 @@ class UPS(object):
       self.request.Shipment = rate_xml.ShipmentType()
       self.request.Shipment.ShipmentRatingOptions = rate_xml.ShipmentServiceOptionsType()
       self.request.Shipment.ShipmentRatingOptions.NegotiatedRatesIndicator = ''
+      if service_type:
+         # Set the service type if needed
+         self.request.Shipment.Service = rate_xml.CodeType()
+         self.request.Shipment.Service.Code = service_type
       
       self.request.Shipment.Shipper = self.make_shipper(rate_xml, from_address, ups_account)
       self.request.Shipment.ShipTo = self.make_ship_to(rate_xml, to_address)
@@ -132,7 +165,24 @@ class UPS(object):
          self.request.Shipment.Package.append(package)
 
       response = self.send()
-      return rate_response_xml.parseString(response)
+      response_xml = rate_response_xml.parseString(response)
+      
+      info = []
+      for r in response_xml.RatedShipment:
+          try:
+              cost = r.NegotiatedRateCharges.TotalCharge.MonetaryValue
+          except AttributeError:
+              cost = r.TotalCharges.MonetaryValue
+          info.append({
+              'service': SERVICES_LOOKUP.get(r.Service.Code, 'Unknown Service: {}'.format(r.Service.Code)),
+              'package': '',
+              'delivery_day': '',
+              'cost': cost
+          })
+      
+      parsed_response = {'status' : response_xml.Response.ResponseStatusDescription, 'info' : info}
+      
+      return parsed_response
 
    def label(self, packages, packaging_type, service_type, from_address, to_address, email_alert=None, evening=False, payment=None, delivery_instructions=''):
       pass
