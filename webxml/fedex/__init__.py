@@ -208,7 +208,7 @@ class FedEx(object):
          package = rate_xml.RequestedPackageLineItem()
          package.SequenceNumber = sequence
          package.GroupNumber = sequence
-         package.GroupPackageCount = len(packages)
+         package.GroupPackageCount = 1
          package.PhysicalPackaging = 'BOX'
          package.InsuredValue = rate_xml.Money()
          package.InsuredValue.Amount = p.value
