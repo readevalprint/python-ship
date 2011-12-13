@@ -1,21 +1,21 @@
-Currently requires suds and suds must be patched to work with UPS.
+Fork of benweatherman / python-ship that aims at using non-SOAP xml interface instead of wsdls and soap.
 
-Index: /suds/client.py
-===================================================================
---- client.py	(revision 1741)
-+++ client.py	(revision 1714)
-@@ -631,8 +631,7 @@
-             else:
-                 soapenv = soapenv.plain()
-             soapenv = soapenv.encode('utf-8')
--            context = plugins.message.sending(envelope=soapenv)
--            soapenv = context.envelope
-+            plugins.message.sending(envelope=soapenv)
-             request = Request(location, soapenv)
-             request.headers = self.headers()
-             reply = transport.send(request)
-             
-Working toward using non-SOAP interfaces for UPS and FedEx which should make it easier to setup.  XML interface generated with generateDS.py.
+Things that are working as of December 11, 2011:
+ - UPS address validation
+ - UPS Rate Request
+ - FedEx Rate Request
+ 
+Up next:
+ - Handle FedEx error message (these are sent back as SOAP errors.  FedEx non-SOAP must jsut wrap and send to soap interface)
+ - UPS Label
+ - FedEx Label
+ - Test FedEx address validation
+ 
+Other notes:
+ - Should not require suds unless I made a mistake.
+ - Might just work as is in Python 2.7
+ - Request and Response times seem faster.  Probably tear down and creation of suds client. More likely my imagination.
+ - XML interface generated with generateDS.py. (http://www.rexx.com/~dkuhlman/generateDS.html)
 
 ups_config and fedex_config need to be a dictionaries
 
