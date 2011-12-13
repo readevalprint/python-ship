@@ -1,1 +1,1 @@
-__all__ = [ 'UPS', 'USPS', 'endicia', 'common' ]
+__all__ = ['shipping', 'ups', 'fedex', 'endicia']
