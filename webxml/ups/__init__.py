@@ -89,7 +89,7 @@ class UPS(object):
       ship_to.Address.AddressLine3 = getattr(to_address, 'address3', '')
       ship_to.Address.City = to_address.city
       if to_address.country in ('US', 'CA', 'IE'):
-         ship_to.Address.StateProviceCode = to_address.state
+         ship_to.Address.StateProvinceCode = to_address.state
       ship_to.Address.PostalCode = to_address.zip
       ship_to.Address.CountryCode = to_address.country
       if to_address.is_residence:
@@ -116,11 +116,11 @@ class UPS(object):
       self.request.CustomerClassification.Code = rate_type
       
       self.request.Shipment = rate_xml.ShipmentType()
-      self.request.Shipment.ShipmentRatingOptions = rate_xml.ShipmentServiceOptionsType()
-      self.request.Shipment.ShipmentRatingOptions.NegotiatedRatesIndicator = ''
+      self.request.Shipment.RateInformation = rate_xml.RateInformationType()
+      self.request.Shipment.RateInformation.NegotiatedRatesIndicator = ''
       if service_type:
          # Set the service type if needed
-         self.request.Shipment.Service = rate_xml.CodeType()
+         self.request.Shipment.Service = rate_xml.CodeDescriptionType()
          self.request.Shipment.Service.Code = service_type
       
       self.request.Shipment.Shipper = self.make_shipper(rate_xml, from_address, ups_account)
