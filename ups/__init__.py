@@ -38,6 +38,10 @@ import accessrequest as access_xml
 import raterequest as rate_xml
 import rateresponse as rate_response_xml
 
+import xavrequest as avs_xml
+import xavresponse as avs_response_xml
+from shipping import Address
+
 class UPS(object):
    def __init__(self, credentials_dictionary={}, debug=True, username='', password='', account='', license=''):
       self.access = access_xml.AccessRequest()
@@ -96,15 +100,82 @@ class UPS(object):
          ship_to.Address.ResidentialAddressIndicator = ''
       return ship_to
          
-   def verify(self, address):
-      pass
+   def verify(self, address, transaction_id = None):
+      self.post_url_suffix = 'XAV'
+      self.request = avs_xml.AddressValidationRequest()
+      self.request.Request = avs_xml.RequestType()
+      self.request.Request.TransactionReference = avs_xml.TransactionReferenceType()
+      if transaction_id != None:
+         self.request.Request.TransactionReference.CustomerContext = str(transaction_id)
+      else:
+         self.request.Request.TransactionReference.CustomerContext = datetime.datetime.now().strftime('xav.%Y%m%d.%H%M%S')
+      self.request.Request.RequestAction = 'XAV'
+      self.request.Request.RequestOption = 3 # Address Validation w/ Classification (not documented in xml spec)
       
-   def rate(self, packages, packaging_type, from_address, to_address, ups_account=None, rate_type='00', service_type=None):
+      # Do not set the regional request indicator if using address classification
+      #self.request.RegionalRequestIndicator = ''
+      
+      # Maximum Result Candidates default is 15
+      self.request.MaximumListSize = 5
+      
+      self.request.AddressKeyFormat = []
+      address_info = avs_xml.AddressKeyFormatType()
+      address_info.ConsigneeName = address.name
+      address_info.AddressLine = [ address.address1, address.address2 ]
+      address_info.PoliticalDivision2 = address.city
+      address_info.PoliticalDivision1 = address.state
+      address_info.PostcodePrimaryLow = address.zip
+      address_info.CountryCode = address.country
+      self.request.AddressKeyFormat.append(address_info)
+      
+      response = self.send()
+      print response
+      response_xml = avs_response_xml.parseString(response)
+      
+      parsed_response = {
+         'status' : response_xml.Response.ResponseStatusDescription, 
+         'transaction_id' : response_xml.Response.TransactionReference.CustomerContext,
+         'candidates' : []}
+         
+      if response_xml.AddressClassification:
+         parsed_response['class_code'] = response_xml.AddressClassification.Code
+         parsed_response['class_description'] = response_xml.AddressClassification.Description
+         
+      parsed_response['valid'] = response_xml.ValidAddressIndicator == True
+      parsed_response['ambiguous'] =  response_xml.AmbiguousAddressIndicator == True
+      parsed_response['no_candidates'] = response_xml.NoCandidatesIndicator == True
+      
+      if not parsed_response['no_candidates']:
+         for candidate in response_xml.AddressKeyFormat:
+            name = candidate.ConsigneeName 
+            if name == None:
+               name = ''
+            a = Address(
+                  name,
+                  candidate.AddressLine[0],
+                  candidate.PoliticalDivision2,
+                  candidate.PoliticalDivision1,
+                  candidate.PostcodePrimaryLow,
+                  candidate.CountryCode)
+            if len(candidate.AddressLine) > 1:
+               a.address2 = candidate.AddressLine[1]
+
+            if a not in parsed_response['candidates']:
+               parsed_response['candidates'].append(a)
+
+      return parsed_response
+      
+   validate = verify
+      
+   def rate(self, packages, packaging_type, from_address, to_address, ups_account=None, rate_type='00', service_type=None, transaction_id=None):
       self.post_url_suffix = 'Rate'
       self.request = rate_xml.RatingServiceSelectionRequest()
       self.request.Request = rate_xml.RequestType()
       self.request.Request.TransactionReference = rate_xml.TransactionReferenceType()
-      self.request.Request.TransactionReference.CustomerContext = datetime.datetime.now().strftime('rate.%Y%m%d.%H%M%S')
+      if transaction_id != None:
+         self.request.Request.TransactionReference.CustomerContext = str(transaction_id)
+      else:
+         self.request.Request.TransactionReference.CustomerContext = datetime.datetime.now().strftime('rate.%Y%m%d.%H%M%S')
       self.request.Request.RequestAction = 'Rate'
       self.request.Request.RequestOption = 'Shop'
       
@@ -180,7 +251,10 @@ class UPS(object):
               'cost': cost
           })
       
-      parsed_response = {'status' : response_xml.Response.ResponseStatusDescription, 'info' : info}
+      parsed_response = {
+         'status' : response_xml.Response.ResponseStatusDescription, 
+         'transaction_id' : response_xml.Response.TransactionReference.CustomerContext,
+         'info' : info}
       
       return parsed_response
 
