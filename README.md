@@ -1,21 +1,18 @@
 Fork of benweatherman / python-ship that aims at using non-SOAP xml interface
-=============================================================================
+-----------------------------------------------------------------------------
 
-Things that are working as of December 11, 2011
-------------------------------------------------
+**Things that are working as of December 11, 2011**  
  * UPS address validation
  * UPS Rate Request
  * FedEx Rate Request
  
-Up next
--------
+**Up next**  
  * Handle FedEx error message (these are sent back as SOAP errors.  FedEx non-SOAP must jsut wrap and send to soap interface)
  * UPS Label
  * FedEx Label
  * Test FedEx address validation
  
-Other notes
------------
+**Other notes**  
  * Should not require suds unless I made a mistake.
  * Might just work as is in Python 2.7
  * Request and Response times seem faster.  Probably tear down and creation of suds client. More likely my imagination.
@@ -42,5 +39,5 @@ Test and Production Key information available at
 * FedEx : http://www.fedex.com/us/developer/index.html
 * UPS : http://www.ups.com/content/us/en/resources/techsupport/developercenter.html
 
-* You need a UPS and FedEx account to get the keys
-* I don't use endicia for postage so haven't looked into the setup for it
+You need a UPS and FedEx account to get the keys  
+I don't use endicia for postage so haven't looked into the setup for it  
