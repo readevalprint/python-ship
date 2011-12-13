@@ -40,7 +40,7 @@ import rateresponse as rate_response_xml
 
 import xavrequest as avs_xml
 import xavresponse as avs_response_xml
-from shipping import Address
+from ..shipping import Address
 
 class UPS(object):
    def __init__(self, credentials_dictionary={}, debug=True, username='', password='', account='', license=''):
