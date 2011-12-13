@@ -1,4 +1,5 @@
-Fork of benweatherman / python-ship that aims at using non-SOAP xml interface instead of wsdls and soap.
+Fork of benweatherman / python-ship that aims at using non-SOAP xml interface
+=============================================================================
 
 Things that are working as of December 11, 2011
 ------------------------------------------------
@@ -37,8 +38,9 @@ Other notes
       }
 
 Test and Production Key information available at
-FedEx : http://www.fedex.com/us/developer/index.html
-UPS : http://www.ups.com/content/us/en/resources/techsupport/developercenter.html
+------------------------------------------------
+* FedEx : http://www.fedex.com/us/developer/index.html
+* UPS : http://www.ups.com/content/us/en/resources/techsupport/developercenter.html
 
 * You need a UPS and FedEx account to get the keys
 * I don't use endicia for postage so haven't looked into the setup for it
