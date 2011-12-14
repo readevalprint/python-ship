@@ -23,9 +23,9 @@ ups = UPS(ups_config, debug=False)
 #print(white_house)
 #print(ups.validate(white_house))
 
-print(powells)
-r = ups.validate(powells)
-print r
+#print(powells)
+#r = ups.validate(powells)
+#print r
 
 ten_pound_box = Package(10.0 * 16, 12, 12, 12, value=100, require_signature=3, reference='a12302b')
 our_packaging =  PACKAGES[0][0]
@@ -38,5 +38,7 @@ prod = fedex.Fedex(fedex_prod, debug=False)
 test = fedex.Fedex(fedex_test, debug=True)
 our_packaging = fedex.PACKAGES[4]
 # Powells really likes books
-#print(test.rate([ten_pound_box], our_packaging, our_place, powells))
-#print(prod.rate([ten_pound_box], our_packaging, our_place, powells))
+#r = test.rate([ten_pound_box], our_packaging, our_place, powells)
+#print r
+r = prod.rate([ten_pound_box], our_packaging, our_place, powells)
+print r

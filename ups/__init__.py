@@ -40,7 +40,13 @@ import rateresponse as rate_response_xml
 
 import xavrequest as avs_xml
 import xavresponse as avs_response_xml
-from ..shipping import Address
+
+# Dumbness that I have something name shipping somewhere else and this import needs to work both in the lib for testing and in my other library
+import os.path
+working_dir = os.path.dirname(__file__)
+parent_dir = os.path.split(working_dir)[0]
+root_namespace = os.path.split(parent_dir)[1]
+shipping = __import__(root_namespace + '.shipping')
 
 class UPS(object):
    def __init__(self, credentials_dictionary={}, debug=True, username='', password='', account='', license=''):
@@ -150,7 +156,7 @@ class UPS(object):
             name = candidate.ConsigneeName 
             if name == None:
                name = ''
-            a = Address(
+            a = shipping.Address(
                   name,
                   candidate.AddressLine[0],
                   candidate.PoliticalDivision2,

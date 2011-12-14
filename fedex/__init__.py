@@ -9,6 +9,7 @@ import urllib2
 import avs as avs_xml
 import rate as rate_xml
 import ship as ship_xml
+import soapenvelope as soap_xml
 
 SERVICES = [
       "EUROPE_FIRST_INTERNATIONAL_PRIORITY",
@@ -309,9 +310,10 @@ class FedEx(object):
       response_data = response.read()
       logger.debug('XML Response:\n%s' % response_data)
          
-      if 'soapenv' in response_data:
+      if 'soapenv:Fault' in response_data:
          # FedEx returns a soap fault so parse the soap envelope and do something smart
-         pass
+         #soap_error = soap_xml.parseString(response_data)
+         print response_data
       
       return response_data
       
