@@ -1,0 +1,16 @@
+<!-- Soap Fault schema that FedEx seems to be using -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+xmlns:soapenv="http://www.w3.org/2001/06/soap-envelope"
+targetNamespace="http://www.w3.org/2001/06/soap-envelope">
+  <xs:complexType name="Fault">
+    <xs:annotation>
+      <xs:documentation>Fault reporting structure</xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="faultcode" type="xs:string" />
+      <xs:element name="faultstring" type="xs:string" />
+      <xs:element name="faultactor" type="xs:string" minOccurs="0" />
+      <xs:element name="detail" type="xs:string" minOccurs="0" />
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

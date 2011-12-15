@@ -1,6 +1,5 @@
 import logging
 logger = logging.getLogger(__name__)
-print __name__
 
 import datetime
 import StringIO
@@ -9,7 +8,7 @@ import urllib2
 import avs as avs_xml
 import rate as rate_xml
 import ship as ship_xml
-import soapenvelope as soap_xml
+import soapfault as fault_xml
 
 SERVICES = [
       "EUROPE_FIRST_INTERNATIONAL_PRIORITY",
@@ -47,18 +46,12 @@ class FedexError(Exception):
     pass
 
 class FedexWebError(FedexError):
-    def __init__(self, fault, document):
-        self.fault = fault
-        self.document = document
-        
-        fault = self.document.childAtPath('/Envelope/Body/Fault/detail/fault')
-        code = fault.childAtPath('/errorCode').getText()
-        reason = fault.childAtPath('/reason').getText()
-        messages = fault.childrenAtPath('/details/ValidationFailureDetail/message')
-        words = [ x.getText() for x in messages ]
-        error_lines = '\n'.join(words)
-        
-        error_text = 'FedEx error %s: %s Details:\n%s ' % (code, reason, error_lines)
+    def __init__(self, soap_fault):
+        self.document = soap_fault
+        self.faultcode = soap_fault.faultcode
+        self.faultstring = soap_fault.faultstring
+        self.details = soap_fault.detail        
+        error_text = 'FedEx error %s: %s Details:\n%s ' % (self.faultcode, self.faultstring, self.details)
         super(FedexError, self).__init__(error_text)
 
 class FedexShipError(FedexError):
@@ -312,8 +305,8 @@ class FedEx(object):
          
       if 'soapenv:Fault' in response_data:
          # FedEx returns a soap fault so parse the soap envelope and do something smart
-         #soap_error = soap_xml.parseString(response_data)
-         print response_data
+         fault = fault_xml.parseString(response_data)
+         raise FedexWebError(fault)
       
       return response_data
       

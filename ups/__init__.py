@@ -46,7 +46,9 @@ import os.path
 working_dir = os.path.dirname(__file__)
 parent_dir = os.path.split(working_dir)[0]
 root_namespace = os.path.split(parent_dir)[1]
-shipping = __import__(root_namespace + '.shipping')
+if len(root_namespace) > 0:
+   root_namespace += '.'
+shipping = __import__(root_namespace + 'shipping')
 
 class UPS(object):
    def __init__(self, credentials_dictionary={}, debug=True, username='', password='', account='', license=''):

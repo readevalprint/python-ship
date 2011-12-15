@@ -40,5 +40,9 @@ our_packaging = fedex.PACKAGES[4]
 # Powells really likes books
 #r = test.rate([ten_pound_box], our_packaging, our_place, powells)
 #print r
-r = prod.rate([ten_pound_box], our_packaging, our_place, powells)
-print r
+try:
+   r = prod.rate([ten_pound_box], our_packaging, our_place, powells)
+   print r
+except Exception as e:
+   r = e
+   print r
