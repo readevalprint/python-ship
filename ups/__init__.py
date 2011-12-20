@@ -41,14 +41,7 @@ import rateresponse as rate_response_xml
 import xavrequest as avs_xml
 import xavresponse as avs_response_xml
 
-# Dumbness that I have something name shipping somewhere else and this import needs to work both in the lib for testing and in my other library
-import os.path
-working_dir = os.path.dirname(__file__)
-parent_dir = os.path.split(working_dir)[0]
-root_namespace = os.path.split(parent_dir)[1]
-if len(root_namespace) > 0:
-   root_namespace += '.'
-shipping = __import__(root_namespace + 'shipping')
+from pyship import shipping
 
 class UPS(object):
    def __init__(self, credentials_dictionary={}, debug=True, username='', password='', account='', license=''):
@@ -137,7 +130,6 @@ class UPS(object):
       self.request.AddressKeyFormat.append(address_info)
       
       response = self.send()
-      print response
       response_xml = avs_response_xml.parseString(response)
       
       parsed_response = {
