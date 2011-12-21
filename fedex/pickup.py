@@ -9945,9 +9945,6 @@ def parseString(inString):
     rootObj.build(rootNode)
     # Enable Python to collect the space used by the DOM.
     doc = None
-    sys.stdout.write('<?xml version="1.0" ?>\n')
-    rootObj.export(sys.stdout, 0, name_="CancelPickupReply",
-        namespacedef_='')
     return rootObj
 
 

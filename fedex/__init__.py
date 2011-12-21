@@ -8,6 +8,7 @@ import urllib2
 import avs as avs_xml
 import rate as rate_xml
 import ship as ship_xml
+import pickup as pickup_xml
 import soapfault as fault_xml
 
 SERVICES = [
@@ -107,9 +108,6 @@ class FedEx(object):
       party.Address.CountryCode = address.country
       party.Address.Residential = address.is_residence
       return party
-      
-   def add_package(self, package):
-      pass
       
    def verify(self, address):
       self.request = avs_xml.AddressValidationRequest()
@@ -276,6 +274,51 @@ class FedEx(object):
       self.post_url_suffix = 'ship/'
       
       self.send()
+      
+   def pickup(self, service_type, ready_time, close_time, package_count, total_weight, courier_comments=None):
+      """ Request a pickup by FedEx Ground or Express (uses the address for the account)
+             service_type in ("FDXC", "FDXE", "FDXG", "FXCC", "FXFR", "FXSP")  (FDXG is ground, FDXE is Express, not sure about others)
+             ready_time = datetime for start of pickup window
+             close_time = time that the location closes
+             package_count = number of packages for the service
+             total_weight = weight in lbs of all packages (if more than $150, you must call?)
+             courier_comments = 60 characters to tell driver what to do
+      """
+      if service_type not in ("FDXC", "FDXE", "FDXG", "FXCC", "FXFR", "FXSP"):
+         raise FedexError('Invalid Service Type %s for Pickup Request' % service_type)
+
+      self.request = pickup_xml.CreatePickupRequest()
+      self.add_version('disp', 3, 0, 0)
+      self.namespacedef = 'http://fedex.com/ws/pickup/v3'
+      self.post_url_suffic = 'pickup/'
+      
+      # Transaction Detail
+      self.request.TransactionDetail = pickup_xml.TransactionDetail()
+      self.request.TransactionDetail.CustomerTransactionId = datetime.datetime.now().strftime('pickup.%Y%m%d.%H%M%S')
+
+      # Pickup Origin
+      self.request.OriginaDetail = pickup_xml.PickupOriginDetail()
+      self.request.OriginaDetail.UseAccountAddress = True
+      self.request.OriginaDetail.ReadyTimestamp = ready_time
+      self.request.OriginaDetail.CompanyCloseTime = close_time
+      
+      # Packages to pickup
+      self.request.PackageCount = package_count
+      self.request.TotalWeight =  pickup_xml.Weight()
+      self.request.TotalWeight.Units = 'LB'
+      self.request.TotalWeight.Value = total_weight
+      
+      # Service to use
+      self.request.CarrierCode = service_type
+      
+      # Courier comments
+      if courier_comments:
+         self.request.Remarks = courier_comments[:60]
+      
+      response = self.send()
+      response_xml = pickup_xml.parseString(response)
+      
+      return response_xml
       
    def send(self):
       logger.setLevel(10)

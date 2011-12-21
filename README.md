@@ -1,4 +1,5 @@
-# Fork of benweatherman / python-ship that aims at using non-SOAP xml interface
+# Fork of benweatherman / python-ship 
+ * This fork aims at using non-SOAP xml interface to FedEx and UPS
 
 #### Things that are working as of December 15, 2011
  * UPS address validation
@@ -6,10 +7,11 @@
  * FedEx Rate Request
  * Handle FedEx soap:Fault error messages
  
-#### Up next
+#### Up next (in no particular order)
+ * FedEx Pickup Request
  * UPS Label
  * FedEx Label
- * Test FedEx address validation
+ * Test FedEx address validation and parse response 
  
 #### Other notes
  * Should not require suds unless I made a mistake.
