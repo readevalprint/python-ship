@@ -289,7 +289,7 @@ class FedEx(object):
 
       self.request = pickup_xml.CreatePickupRequest()
       self.add_version('disp', 3, 0, 0)
-      self.namespacedef = 'http://fedex.com/ws/pickup/v3'
+      self.namespacedef = 'xmlns:ns="http://fedex.com/ws/pickup/v3"'
       self.post_url_suffic = 'pickup/'
       
       # Transaction Detail
@@ -297,10 +297,10 @@ class FedEx(object):
       self.request.TransactionDetail.CustomerTransactionId = datetime.datetime.now().strftime('pickup.%Y%m%d.%H%M%S')
 
       # Pickup Origin
-      self.request.OriginaDetail = pickup_xml.PickupOriginDetail()
-      self.request.OriginaDetail.UseAccountAddress = True
-      self.request.OriginaDetail.ReadyTimestamp = ready_time
-      self.request.OriginaDetail.CompanyCloseTime = close_time
+      self.request.OriginDetail = pickup_xml.PickupOriginDetail()
+      self.request.OriginDetail.UseAccountAddress = True
+      self.request.OriginDetail.ReadyTimestamp = ready_time.strftime('%Y-%m-%dT%H:%M:%S')
+      self.request.OriginDetail.CompanyCloseTime = close_time.strftime('%H:%M:%S')
       
       # Packages to pickup
       self.request.PackageCount = package_count
@@ -317,6 +317,9 @@ class FedEx(object):
       
       response = self.send()
       response_xml = pickup_xml.parseString(response)
+      
+      if response_xml.HighestSeverity in ('ERROR', 'FAILURE'):
+         raise FedexShipError(response_xml)
       
       return response_xml
       

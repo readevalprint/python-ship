@@ -7239,8 +7239,9 @@ class PickupOriginDetail(GeneratedsSuper):
         if self.ReadyTimestamp is not None:
             showIndent(outfile, level)
             outfile.write('<%sReadyTimestamp>%s</%sReadyTimestamp>\n' % (namespace_, self.gds_format_string(quote_xml(self.ReadyTimestamp).encode(ExternalEncoding), input_name='ReadyTimestamp'), namespace_))
-        if self.CompanyCloseTime:
-            self.CompanyCloseTime.export(outfile, level, namespace_, name_='CompanyCloseTime')
+        if self.CompanyCloseTime is not None:
+            showIndent(outfile, level)
+            outfile.write('<%sCompanyCloseTime>%s</%sCompanyCloseTime>\n' % (namespace_, self.gds_format_string(quote_xml(self.CompanyCloseTime).encode(ExternalEncoding), input_name='CompanyCloseTime'), namespace_))
         if self.StayLate is not None:
             showIndent(outfile, level)
             outfile.write('<%sStayLate>%s</%sStayLate>\n' % (namespace_, self.gds_format_boolean(self.gds_str_lower(str(self.StayLate)), input_name='StayLate'), namespace_))
